@@ -26,6 +26,12 @@ public class PalavraController {
     
     @Autowired
     private PalavraService palavraService; 
+    
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+    
+    @Autowired
+    private ConjuntoDeCardsRepository conjuntoRepository;
 
     @GetMapping
     public List<Palavra> listarTodas() {
@@ -66,13 +72,35 @@ public class PalavraController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Deletar uma palavra (Regra de Negócio: Bloqueia se estiver em uso)
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+    public ResponseEntity<String> deletar(@PathVariable Long id) {
         if (repository.existsById(id)) {
-            repository.deleteById(id);
-            return ResponseEntity.noContent().build();
+            Palavra palavra = repository.findById(id).orElseThrow();
+
+            // 1. Verifica se algum aluno favoritou a palavra
+            java.util.List<Usuario> usuarios = usuarioRepository.findAll();
+            for (Usuario u : usuarios) {
+                if (u.getFavoritos().contains(palavra)) {
+                    return ResponseEntity.status(409)
+                            .body("Bloqueado: Esta palavra está nos favoritos de um ou mais alunos.");
+                }
+            }
+
+            // 2. Verifica se a palavra está em algum deck
+            java.util.List<ConjuntoDeCards> conjuntos = conjuntoRepository.findAll();
+            for (ConjuntoDeCards c : conjuntos) {
+                if (c.getPalavras().contains(palavra)) {
+                    return org.springframework.http.ResponseEntity.status(409)
+                            .body("Bloqueado: Esta palavra está sendo usada em um Deck de estudos.");
+                }
+            }
+
+            // Se passou ilesa pelas verificações acima, ninguém está usando. Pode apagar!
+            repository.delete(palavra);
+            return org.springframework.http.ResponseEntity.ok().build();
         }
-        return ResponseEntity.notFound().build();
+        return org.springframework.http.ResponseEntity.notFound().build();
     }
 
     @PostMapping("/{palavraId}/favoritar")
