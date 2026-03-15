@@ -1,0 +1,3 @@
+2026-03-14 20:26:14.730332-04:00 jdbc[13]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "[*]FRASE_EXEMPLO"; SQL statement:
+FRASE_EXEMPLO [42000-232]
